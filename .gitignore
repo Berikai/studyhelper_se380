@@ -44,5 +44,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Backend
+node_modules
+
 # Remove all files starting with __
 __*

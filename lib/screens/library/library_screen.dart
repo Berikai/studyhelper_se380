@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../state/app_state.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -8,56 +9,12 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  List<String> allLessons = []; 
-  List<String> displayedLessons = [];
   TextEditingController searchController = TextEditingController();
 
+  // This function will be called whenever the search textfield changes.
+  // It calls an empty setState to trigger a rebuild, and the filtering logic is handled in the ListenableBuilder below.
   void filterLessons(String query) {
-    setState(() {
-      displayedLessons = allLessons
-          .where((lesson) => lesson.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-    });
-  }
-
-  void addLesson() {
-    TextEditingController newLessonController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF242938), 
-          title: const Text("Add Lesson", style: TextStyle(color: Colors.white)),
-          content: TextField(
-            controller: newLessonController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: "Lesson Name",
-              hintStyle: TextStyle(color: Colors.white38),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (newLessonController.text.isNotEmpty) {
-                  setState(() {
-                    allLessons.add(newLessonController.text);
-                    filterLessons(searchController.text); 
-                  });
-                }
-                Navigator.pop(context);
-              },
-              child: const Text("Add"),
-            ),
-          ],
-        );
-      },
-    );
+    setState(() {});
   }
 
   @override
@@ -65,7 +22,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent, 
       appBar: AppBar(
-        title: const Text("Library", style: TextStyle(color: Colors.white)),
+        title: const Text("Library", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.transparent, 
         elevation: 0,
@@ -74,6 +31,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
+            // Search bar at the top of the library screen
             TextField(
               controller: searchController,
               onChanged: filterLessons,
@@ -83,45 +41,94 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 hintStyle: const TextStyle(color: Colors.white38),
                 prefixIcon: const Icon(Icons.search, color: Colors.white38),
                 filled: true,
-                fillColor: const Color(0xFF242938).withOpacity(0.8), 
+                fillColor: const Color(0xFF242938).withValues(alpha: 0.8), // withOpacity is deprecated, using withValues instead
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            
-            ElevatedButton.icon(
-              onPressed: addLesson,
-              icon: const Icon(Icons.add),
-              label: const Text("Add Lesson"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurpleAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
+
+            // Spacing between search bar and lecture list
             const SizedBox(height: 16),
             
+            // List of lectures, wrapped in an Expanded to take up remaining space
             Expanded(
-              child: ListView.builder(
-                itemCount: displayedLessons.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    color: const Color(0xFF242938).withOpacity(0.9),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: const Icon(Icons.menu_book_rounded, color: Colors.blueAccent),
-                      title: Text(
-                        displayedLessons[index],
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.white24),
-                    ),
+              child: ListenableBuilder(
+                // Listen to changes in the app state to update the lecture list when new lectures are added or when loading state changes
+                listenable: appState, 
+                // Builder function that builds the lecture list based on the current state of the app
+                builder: (context, child) {
+                  // Filter lectures with searchController text, ignoring case
+                  final displayedLectures = appState.lectures
+                    .where((lec) => lec.title.toLowerCase().contains(searchController.text.toLowerCase()))
+                    .toList();
+
+                  if (appState.isLoading && displayedLectures.isEmpty) {
+                     return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
+                  }
+
+                  return ListView.builder(
+                    itemCount: displayedLectures.length,
+                    itemBuilder: (context, index) {
+                      final lecture = displayedLectures[index];
+                      
+                      Color iconBgColor = Colors.blueAccent;
+                      if (lecture.colorIcon == "green") iconBgColor = Colors.teal;
+                      if (lecture.colorIcon == "orange") iconBgColor = Colors.orange;
+                      if (lecture.colorIcon == "pink") iconBgColor = Colors.pinkAccent;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.all(15),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff222536),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: iconBgColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.book, color: Colors.white),
+                              ),
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(lecture.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    const SizedBox(height: 5),
+                                    Text(lecture.dateText, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff1A1C29), // Same as bottom nav bg for contrast
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.message, color: Colors.blueAccent, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text("${lecture.questions}", style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ]
+                                )
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   );
-                },
+                }
               ),
             ),
           ],

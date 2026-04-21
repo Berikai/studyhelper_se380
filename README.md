@@ -27,3 +27,17 @@ To provide a deeper understanding of the material, the app features a built-in A
 - **Database**: MongoDB
 
 - **AI Integration**: Gemini API
+
+## Development
+
+**Requirements**: Flutter 3.41.2 & NodeJS v25.3.0
+
+### Frontend
+
+**Start the app**: `flutter run --debug` 
+
+_or run via IDE integrated extension._
+
+### Backend
+
+**Start backend server**: `cd backend & npm start`

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/lecture_model.dart';
+import '../services/api_service.dart';
 
 // We inherit the ChangeNotifier class to manage the global state of the app, including the list of lectures and loading/error states
 // We call notify listeners whenever we update the state to trigger UI updates.
@@ -11,6 +12,7 @@ import '../models/lecture_model.dart';
 // Also reduces our usage of setState across the app, since we can just update the state here and let the listeners handle the UI updates.
 class AppState extends ChangeNotifier {
   List<LectureModel> lectures = []; // List of lectures fetched from the backend
+  Map<String, dynamic>? userInfo; // User data, including credits
   bool isLoading = false; // Indicates if the app is currently loading data from the backend
   String errorMessage = ''; // Stores any error messages from API calls to display in the UI
 
@@ -24,6 +26,16 @@ class AppState extends ChangeNotifier {
   AppState() {
     // Automatically fetch on creation
     fetchLectures();
+    fetchUserInfo();
+  }
+
+  Future<void> fetchUserInfo() async {
+    try {
+      userInfo = await ApiService.getUserInfo();
+      notifyListeners();
+    } catch (e) {
+      // Ignored
+    }
   }
 
   // Asynchronous function to fetch lectures from the backend API
@@ -33,20 +45,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // We use http lib to make a get request to the backend API
-      final response = await http.get(Uri.parse('$apiBaseUrl/lectures'));
-      if (response.statusCode == 200) { // Status code 200 means success, if the call is successful we move on.
-        final List<dynamic> data = json.decode(response.body);
-        lectures = data.map((json) => LectureModel(
-          id: json['id'],
-          title: json['title'],
-          dateText: json['dateText'],
-          questions: json['questions'],
-          colorIcon: json['colorIcon']
-        )).toList();
-      } else {
-        errorMessage = 'Server error: ${response.statusCode}';
-      }
+      lectures = await ApiService.getLectures();
     } catch (e) {
       errorMessage = 'Failed to connect to API: $e';
     } finally {
@@ -56,32 +55,73 @@ class AppState extends ChangeNotifier {
   }
 
   // Asynchronous function to add a new lecture by sending a POST request to the backend API
-  Future<void> addLecture(LectureModel lec) async {
+  Future<bool> addLecture(LectureModel lec) async {
     try {
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/lectures'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'title': lec.title,
-          'colorIcon': lec.colorIcon,
-        }),
+      final newLecture = await ApiService.createLecture(
+        lec.title, 
+        lec.colorIcon,
+        content: lec.content,
+        documents: lec.documents,
+        flashcards: lec.flashcards,
       );
-      
-      if (response.statusCode == 201) { // Status code 201 means created, if the call is successful we move on.
-        final jsonData = json.decode(response.body);
-        final newLecture = LectureModel(
-          id: jsonData['id'],
-          title: jsonData['title'],
-          dateText: jsonData['dateText'],
-          questions: jsonData['questions'],
-          colorIcon: jsonData['colorIcon'],
-        );
+      if (newLecture != null) {
         lectures.add(newLecture);
         notifyListeners();
+        return true;
+      } else {
+        errorMessage = 'Failed to add lecture (API returned null)';
+        notifyListeners();
+        return false;
       }
     } catch (e) {
       errorMessage = 'Failed to add lecture: $e';
       notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateLecture(String id, String title, String content) async {
+    try {
+      final success = await ApiService.updateLecture(id, title, content);
+      if (success) {
+        final index = lectures.indexWhere((l) => l.id == id);
+        if (index != -1) {
+          final old = lectures[index];
+          lectures[index] = LectureModel(
+            id: old.id,
+            title: title,
+            content: content,
+            dateText: old.dateText,
+            questions: old.questions,
+            colorIcon: old.colorIcon,
+            documents: old.documents,
+            flashcards: old.flashcards,
+          );
+          notifyListeners();
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      errorMessage = 'Failed to update lecture: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteLecture(String id) async {
+    try {
+      final success = await ApiService.deleteLecture(id);
+      if (success) {
+        lectures.removeWhere((l) => l.id == id);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      errorMessage = 'Failed to delete lecture: $e';
+      notifyListeners();
+      return false;
     }
   }
 }

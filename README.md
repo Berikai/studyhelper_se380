@@ -24,7 +24,7 @@ To provide a deeper understanding of the material, the app features a built-in A
 
 - **Backend**: Node.js (Express)
 
-- **Database**: MongoDB
+- **Database**: SQLite (Local)
 
 - **AI Integration**: Gemini API
 
@@ -40,4 +40,12 @@ _or run via IDE integrated extension._
 
 ### Backend
 
-**Start backend server**: `cd backend & npm start`
+**To run this locally**, you need to set up the Node.js backend and a MongoDB database (or use the provided MongoDB Atlas connection).
+
+1.  **Install dependencies**: Navigate to the `backend` directory and run `npm install`.
+2.  **Environment setup**: Create a `.env` file in `backend/` directory with the following:
+    ```env
+    JWT_SECRET="INSERT_RANDOM_JWT_SECRET_FOR_SECURITY"
+    GEMINI_API_KEY="INSERT_GEMINI_API_KEY"
+    ```
+3.  **Start the server**: Run `npm start` in the `backend` directory.

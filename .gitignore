@@ -47,5 +47,11 @@ app.*.map.json
 # Backend
 node_modules
 
+# Local Database (in backend/)
+*.sqlite
+
+# Local Environment Variables (in backend/)
+.env
+
 # Remove all files starting with __
 __*

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../state/app_state.dart';
+import 'lecture_details_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -80,49 +81,59 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                        child: Container(
-                          padding: const EdgeInsets.all(15),
-                          decoration: BoxDecoration(
-                            color: const Color(0xff222536),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: iconBgColor,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.book, color: Colors.white),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LectureDetailsScreen(lecture: lecture),
                               ),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(lecture.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                    const SizedBox(height: 5),
-                                    Text(lecture.dateText, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                                  ],
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff222536),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: iconBgColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.book, color: Colors.white),
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xff1A1C29), // Same as bottom nav bg for contrast
-                                  borderRadius: BorderRadius.circular(10),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(lecture.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      const SizedBox(height: 5),
+                                      Text(lecture.dateText, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                    ],
+                                  ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.message, color: Colors.blueAccent, size: 14),
-                                    const SizedBox(width: 4),
-                                    Text("${lecture.questions}", style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
-                                  ]
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xff1A1C29), // Same as bottom nav bg for contrast
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.message, color: Colors.blueAccent, size: 14),
+                                      const SizedBox(width: 4),
+                                      Text("${lecture.questions}", style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                                    ]
+                                  )
                                 )
-                              )
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );

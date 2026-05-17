@@ -15,6 +15,7 @@ class _CreateScreenState extends State<CreateScreen> {
   final TextEditingController _contentController = TextEditingController();
   bool _isLoading = false;
   String? _attachedFileName;
+  PlatformFile? _attachedFile;
 
   void _createLecture() async {
     final title = _nameController.text.trim();
@@ -152,18 +153,19 @@ class _CreateScreenState extends State<CreateScreen> {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.custom,
                       allowedExtensions: ['pdf', 'txt', 'doc', 'docx'],
+                      withData: true,
                     );
                     if (result != null && result.files.isNotEmpty) {
-                      final file = result.files.first;
+                      _attachedFile = result.files.first;
                       setState(() {
-                        _attachedFileName = file.name;
+                        _attachedFileName = _attachedFile!.name;
                         if (_nameController.text.isEmpty) {
-                          _nameController.text = file.name;
+                          _nameController.text = _attachedFile!.name;
                         }
-                        _contentController.text = "Attached Document: ${file.name}\n\n(AI will extract content from this document automatically on the backend.)";
+                        _contentController.text = "Attached Document: ${_attachedFile!.name}\n\n(AI will extract content from this document automatically on the backend.)";
                       });
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Attached ${file.name}')));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Attached ${_attachedFile!.name}')));
                       }
                     }
                   } catch (e) {

@@ -1,13 +1,19 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File, Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/lecture_model.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ApiService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS/web
   // TODO: Replace with actual IP address when deploying
-  static final String baseUrl = Platform.isAndroid ? 'http://10.0.2.2:9090/api' : 'http://localhost:9090/api';
+  static String get baseUrl {
+    if (kIsWeb) return 'http://localhost:9090/api';
+    return Platform.isAndroid ? 'http://10.0.2.2:9090/api' : 'http://localhost:9090/api';
+  }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -101,7 +107,45 @@ class ApiService {
     }
     throw Exception(jsonDecode(response.body)['error'] ?? "Failed to create lecture");
   }
-  
+
+  static Future<LectureModel?> createLectureWithFile(
+    String title,
+    String colorIcon, {
+    String content = '',
+    PlatformFile? document,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception("Not authenticated");
+
+    final uri = Uri.parse('$baseUrl/lectures');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['title'] = title
+      ..fields['colorIcon'] = colorIcon
+      ..fields['content'] = content;
+
+    if (document != null) {
+      final bytes = document.bytes ??
+          await File(document.path!).readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'document',
+          bytes,
+          filename: document.name,
+          contentType: MediaType('application', 'pdf'),
+        ),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 201) {
+      return LectureModel.fromJson(jsonDecode(response.body));
+    }
+    throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to create lecture');
+  }
+
   static Future<void> seedLectures() async {
     final token = await getToken();
     if (token == null) return;

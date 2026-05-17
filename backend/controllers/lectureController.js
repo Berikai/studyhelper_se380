@@ -9,6 +9,17 @@ export const getAllLectures = (req, res) => {
 };
 
 export const createLecture = (req, res) => {
+  let documents = req.body.documents || '[]';
+
+  if (req.file) {
+    const fileMeta = {
+      name: req.file.originalname,
+      path: req.file.path,
+      mime: req.file.mimetype
+    };
+    documents = JSON.stringify([fileMeta]);
+  }
+
   const newLecture = {
     id: Date.now().toString(),
     user_id: req.user.id,
@@ -16,7 +27,7 @@ export const createLecture = (req, res) => {
     dateText: "Created Just Now",
     questions: 0,
     colorIcon: req.body.colorIcon || "blue",
-    documents: req.body.documents || '[]',
+    documents,
     flashcards: req.body.flashcards || '[]',
     content: req.body.content || ""
   };

@@ -127,12 +127,21 @@ class ApiService {
     if (document != null) {
       final bytes = document.bytes ??
           await File(document.path!).readAsBytes();
+      final ext = document.name.split('.').last.toLowerCase();
+      final mimeMap = {
+        'pdf': 'application/pdf',
+        'txt': 'text/plain',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+      final mimeFull = mimeMap[ext] ?? 'application/octet-stream';
+      final mimeParts = mimeFull.split('/');
       request.files.add(
         http.MultipartFile.fromBytes(
           'document',
           bytes,
           filename: document.name,
-          contentType: MediaType('application', 'pdf'),
+          contentType: MediaType(mimeParts[0], mimeParts[1]),
         ),
       );
     }
@@ -155,7 +164,7 @@ class ApiService {
     );
   }
 
-  static Future<List<dynamic>> generateCurriculum(String lectureId, String lectureTitle) async {
+  static Future<List<dynamic>> generateCurriculum(String lectureId, String lectureTitle, {bool force = false}) async {
     final token = await getToken();
     if (token == null) return [];
 
@@ -167,7 +176,8 @@ class ApiService {
       },
       body: jsonEncode({
         'lectureId': lectureId,
-        'lectureTitle': lectureTitle
+        'lectureTitle': lectureTitle,
+        'force': force,
       }),
     );
 
@@ -263,17 +273,43 @@ class ApiService {
     return response.statusCode == 200;
   }
 
-  static Future<List<String>> addDocument(String lectureId, String documentName) async {
+  static Future<List<String>> addDocument(String lectureId, PlatformFile document) async {
     final token = await getToken();
     if (token == null) return [];
-    final response = await http.post(
-      Uri.parse('$baseUrl/lectures/$lectureId/documents'),
-      headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-      body: jsonEncode({'documentName': documentName}),
+    
+    final uri = Uri.parse('$baseUrl/lectures/$lectureId/documents');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token';
+
+    final bytes = document.bytes ?? await File(document.path!).readAsBytes();
+    final ext = document.name.split('.').last.toLowerCase();
+    final mimeMap = {
+      'pdf': 'application/pdf',
+      'txt': 'text/plain',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+    final mimeFull = mimeMap[ext] ?? 'application/octet-stream';
+    final mimeParts = mimeFull.split('/');
+    
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'document',
+        bytes,
+        filename: document.name,
+        contentType: MediaType(mimeParts[0], mimeParts[1]),
+      ),
     );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
     if (response.statusCode == 200) {
       final List<dynamic> docs = jsonDecode(response.body)['documents'];
-      return docs.map((e) => e.toString()).toList();
+      return docs.map((e) {
+        if (e is Map) return e['name']?.toString() ?? e.toString();
+        return e.toString();
+      }).toList();
     }
     return [];
   }
@@ -287,7 +323,10 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final List<dynamic> docs = jsonDecode(response.body)['documents'];
-      return docs.map((e) => e.toString()).toList();
+      return docs.map((e) {
+        if (e is Map) return e['name']?.toString() ?? e.toString();
+        return e.toString();
+      }).toList();
     }
     return [];
   }
@@ -300,5 +339,64 @@ class ApiService {
       headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
       body: jsonEncode({'question': question, 'answer': answer}),
     );
+  }
+
+  // Study plan methods
+  static Future<List<Map<String, dynamic>>> getStudyPlans({String? date}) async {
+    final token = await getToken();
+    if (token == null) return [];
+    final url = date != null
+        ? Uri.parse('$baseUrl/plans?date=$date')
+        : Uri.parse('$baseUrl/plans');
+    final response = await http.get(url, headers: {'Authorization': 'Bearer $token'});
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    }
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getStudyPlansByDateRange(String start, String end) async {
+    final token = await getToken();
+    if (token == null) return [];
+    final response = await http.get(
+      Uri.parse('$baseUrl/plans/range?start=$start&end=$end'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> createStudyPlan(String lectureId, String lectureTitle, String targetDate) async {
+    final token = await getToken();
+    if (token == null) return null;
+    final response = await http.post(
+      Uri.parse('$baseUrl/plans'),
+      headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+      body: jsonEncode({'lecture_id': lectureId, 'lecture_title': lectureTitle, 'target_date': targetDate}),
+    );
+    if (response.statusCode == 201) return jsonDecode(response.body);
+    return null;
+  }
+
+  static Future<bool> toggleStudyPlan(String planId) async {
+    final token = await getToken();
+    if (token == null) return false;
+    final response = await http.put(
+      Uri.parse('$baseUrl/plans/$planId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
+  }
+
+  static Future<bool> deleteStudyPlan(String planId) async {
+    final token = await getToken();
+    if (token == null) return false;
+    final response = await http.delete(
+      Uri.parse('$baseUrl/plans/$planId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
   }
 }

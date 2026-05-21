@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 import '../models/lecture_model.dart';
 import '../services/api_service.dart';
 
@@ -11,10 +10,14 @@ import '../services/api_service.dart';
 // Then, widgets that have listenable builders can listen to this state and rebuild when it changes, allowing us to keep the UI in sync with the backend data.
 // Also reduces our usage of setState across the app, since we can just update the state here and let the listeners handle the UI updates.
 class AppState extends ChangeNotifier {
-  List<LectureModel> lectures = []; // List of lectures fetched from the backend
-  Map<String, dynamic>? userInfo; // User data, including credits
-  bool isLoading = false; // Indicates if the app is currently loading data from the backend
-  String errorMessage = ''; // Stores any error messages from API calls to display in the UI
+  List<LectureModel> lectures = [];
+  Map<String, dynamic>? userInfo;
+  bool isLoading = false;
+  String errorMessage = '';
+  
+  // Study plans: maps date strings (YYYY-MM-DD) to list of plan maps
+  Map<String, List<Map<String, dynamic>>> studyPlansByDate = {};
+  bool isLoadingPlans = false;
 
   // Handle local host URLs across macOS (desktop), Web, and Android Emulator
   String get apiBaseUrl {
@@ -54,7 +57,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Asynchronous function to add a new lecture by sending a POST request to the backend API
   Future<bool> addLecture(LectureModel lec) async {
     try {
       final newLecture = await ApiService.createLecture(
@@ -70,6 +72,30 @@ class AppState extends ChangeNotifier {
         return true;
       } else {
         errorMessage = 'Failed to add lecture (API returned null)';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      errorMessage = 'Failed to add lecture: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> addLectureWithFile(String title, String content, PlatformFile document) async {
+    try {
+      final newLecture = await ApiService.createLectureWithFile(
+        title,
+        'blue',
+        content: content,
+        document: document,
+      );
+      if (newLecture != null) {
+        lectures.add(newLecture);
+        notifyListeners();
+        return true;
+      } else {
+        errorMessage = 'Failed to add lecture with file';
         notifyListeners();
         return false;
       }
@@ -123,6 +149,88 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  // Study plan methods
+  Future<void> fetchStudyPlans(String start, String end) async {
+    isLoadingPlans = true;
+    notifyListeners();
+    try {
+      final plans = await ApiService.getStudyPlansByDateRange(start, end);
+      studyPlansByDate = {};
+      for (final plan in plans) {
+        final date = plan['target_date'] as String;
+        studyPlansByDate.putIfAbsent(date, () => []).add(plan);
+      }
+    } catch (e) {
+      // silently fail for plans
+    } finally {
+      isLoadingPlans = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchStudyPlansForDate(String date) async {
+    try {
+      final plans = await ApiService.getStudyPlans(date: date);
+      studyPlansByDate[date] = plans;
+      notifyListeners();
+    } catch (e) {
+      // silently fail
+    }
+  }
+
+  Future<Map<String, dynamic>?> createStudyPlan(String lectureId, String lectureTitle, String targetDate) async {
+    try {
+      final plan = await ApiService.createStudyPlan(lectureId, lectureTitle, targetDate);
+      if (plan != null) {
+        studyPlansByDate.putIfAbsent(targetDate, () => []).add(plan);
+        notifyListeners();
+        return plan;
+      }
+    } catch (e) {
+      errorMessage = 'Failed to create study plan: $e';
+      notifyListeners();
+    }
+    return null;
+  }
+
+  Future<void> toggleStudyPlan(String planId, String targetDate) async {
+    try {
+      final success = await ApiService.toggleStudyPlan(planId);
+      if (success && studyPlansByDate.containsKey(targetDate)) {
+        final plans = studyPlansByDate[targetDate]!;
+        final idx = plans.indexWhere((p) => p['id'].toString() == planId);
+        if (idx != -1) {
+          plans[idx] = {
+            ...plans[idx],
+            'completed': plans[idx]['completed'] == 0 ? 1 : 0,
+          };
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      // silently fail
+    }
+  }
+
+  Future<void> deleteStudyPlan(String planId, String targetDate) async {
+    try {
+      final success = await ApiService.deleteStudyPlan(planId);
+      if (success && studyPlansByDate.containsKey(targetDate)) {
+        studyPlansByDate[targetDate]!.removeWhere((p) => p['id'].toString() == planId);
+        if (studyPlansByDate[targetDate]!.isEmpty) {
+          studyPlansByDate.remove(targetDate);
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      // silently fail
+    }
+  }
+
+  List<Map<String, dynamic>> getPlansForDate(String date) {
+    return studyPlansByDate[date] ?? [];
   }
 }
 

@@ -27,7 +27,12 @@ class LectureModel {
     if (json['documents'] != null) {
       try {
         final List<dynamic> decoded = jsonDecode(json['documents']);
-        parsedDocs = decoded.map((e) => e.toString()).toList();
+        parsedDocs = decoded.map((e) {
+          if (e is Map) {
+            return e['name']?.toString() ?? e.toString();
+          }
+          return e.toString();
+        }).toList();
       } catch (_) {}
     }
 

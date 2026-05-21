@@ -13,6 +13,26 @@ class SessionDetailScreen extends StatelessWidget {
     required this.date,
   });
 
+  Widget _buildMathText(String text, {TextStyle? style}) {
+    final parts = text.split('\$');
+    List<Widget> children = [];
+    for (int i = 0; i < parts.length; i++) {
+      if (i % 2 == 1) {
+        children.add(Math.tex(
+          parts[i],
+          textStyle: style?.copyWith(color: Colors.white),
+          mathStyle: MathStyle.display,
+        ));
+      } else if (parts[i].isNotEmpty) {
+        children.add(Text(parts[i], style: style));
+      }
+    }
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: children,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,9 +63,9 @@ class SessionDetailScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.blueAccent.shade100, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Math.tex(
+                  _buildMathText(
                     item['question'],
-                    textStyle: const TextStyle(color: Colors.white, fontSize: 16),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
                   const SizedBox(height: 16),
                   ...List.generate(item['options'].length, (optIndex) {

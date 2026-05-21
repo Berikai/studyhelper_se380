@@ -140,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _buildListTile(Icons.history, 'Study History', () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyHistoryScreen()));
                         }),
-                        const Divider(height: 1, color: Colors.black26),
+                        /*const Divider(height: 1, color: Colors.black26),
                         _buildListTile(Icons.settings, 'Preferences', () {
                           showDialog(context: context, builder: (_) => AlertDialog(
                             backgroundColor: const Color(0xff222536),
@@ -157,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             content: const Text('Need help? Contact our support team at support@studyhelper.ai', style: TextStyle(color: Colors.white70)),
                             actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close', style: TextStyle(color: Colors.blueAccent)))],
                           ));
-                        }),
+                        }),*/
                         const Divider(height: 1, color: Colors.black26),
                         ListTile(
                           leading: const Icon(Icons.logout, color: Colors.redAccent),

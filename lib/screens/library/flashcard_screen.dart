@@ -64,6 +64,13 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     }
 
     final card = widget.lecture.flashcards[_currentIndex];
+    final text = _showAnswer ? (card['answer'] ?? '') : (card['question'] ?? '');
+    double fontSize = 20;
+    if (text.length > 150) {
+      fontSize = 14;
+    } else if (text.length > 80) {
+      fontSize = 16;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -101,8 +108,8 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
                           Text(_showAnswer ? "ANSWER" : "QUESTION", style: TextStyle(color: _showAnswer ? Colors.purpleAccent : Colors.blueAccent, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                           const SizedBox(height: 24),
                           _buildMathText(
-                            _showAnswer ? (card['answer'] ?? '') : (card['question'] ?? ''),
-                            style: const TextStyle(color: Colors.white, fontSize: 20, height: 1.5),
+                            text,
+                            style: TextStyle(color: Colors.white, fontSize: fontSize, height: 1.5),
                           ),
                         ],
                       ),

@@ -31,6 +31,7 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
 
   Future<void> _fetchData() async {
     try {
+      await Provider.of<AppState>(context, listen: false).fetchLectures();
       final history = await ApiService.getStudyHistory();
       int totalCorrect = 0;
       int totalQuestions = 0;
@@ -60,6 +61,28 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
     }
   }
 
+  Future<void> _refreshCurriculum() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final curriculum = await ApiService.generateCurriculum(widget.lecture.id, widget.lecture.title, force: true);
+      if (mounted) {
+        setState(() {
+          _curriculum = curriculum;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error refreshing curriculum: $e')));
+      }
+    }
+  }
+
   Future<void> _pickDocument() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -68,7 +91,7 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
       );
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
-        final updatedDocs = await ApiService.addDocument(widget.lecture.id, file.name);
+        final updatedDocs = await ApiService.addDocument(widget.lecture.id, file);
         setState(() {
           _docs = updatedDocs;
         });
@@ -83,96 +106,7 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
     }
   }
 
-  void _showStudySettingsDialog() {
-    final TextEditingController countController = TextEditingController(text: '5');
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final int count = int.tryParse(countController.text) ?? 0;
-            final int credits = context.watch<AppState>().userInfo?['credits'] ?? 0;
-            final bool hasEnough = credits >= count;
-            
-            return AlertDialog(
-              backgroundColor: const Color(0xff222536),
-              title: const Text('Study Settings', style: TextStyle(color: Colors.white)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('How many questions would you like to answer?', style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: countController,
-                    style: const TextStyle(color: Colors.white),
-                    onChanged: (_) => setDialogState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'Number of questions',
-                      labelStyle: TextStyle(color: Colors.blueAccent),
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blueAccent)),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: hasEnough ? Colors.blueAccent.withOpacity(0.1) : Colors.redAccent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: hasEnough ? Colors.blueAccent.withOpacity(0.3) : Colors.redAccent.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Estimated Cost:', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            Text('$count Credits', style: TextStyle(color: hasEnough ? Colors.white : Colors.redAccent, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text('Your Balance:', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            Text('$credits Credits', style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: hasEnough ? Colors.blueAccent : Colors.grey),
-                  onPressed: hasEnough ? () {
-                    final int count = int.tryParse(countController.text) ?? 5;
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => StudySessionScreen(lecture: widget.lecture, totalQuestions: count),
-                      ),
-                    ).then((_) {
-                        _fetchData(); // Refresh stats on return
-                        context.read<AppState>().fetchUserInfo(); // Refresh credits
-                    });
-                  } : null,
-                  child: const Text('Start', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          }
-        );
-      },
-    );
-  }
+
 
   void _showEditDialog() {
     final titleController = TextEditingController(text: widget.lecture.title);
@@ -258,10 +192,13 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final lecture = appState.lectures.firstWhere((l) => l.id == widget.lecture.id, orElse: () => widget.lecture);
+
     return Scaffold(
       backgroundColor: const Color(0xff12141D),
       appBar: AppBar(
-        title: Text(widget.lecture.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text(lecture.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -301,7 +238,7 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Total Flashcards:', style: TextStyle(color: Colors.white70)),
-                      Text('${widget.lecture.flashcards.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text('${lecture.flashcards.length}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -309,7 +246,7 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Total Questions Attempted:', style: TextStyle(color: Colors.white70)),
-                      Text('${widget.lecture.questions}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text('${lecture.questions}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -327,7 +264,7 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
                       icon: const Icon(Icons.style, color: Colors.white),
                       label: const Text('View Flashcards', style: TextStyle(color: Colors.white)),
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardScreen(lecture: widget.lecture)));
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardScreen(lecture: lecture)));
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
                     ),
@@ -391,7 +328,17 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
                   ),
             const SizedBox(height: 24),
 
-            const Text('AI Study Curriculum', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('AI Study Curriculum', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.blueAccent),
+                  onPressed: _refreshCurriculum,
+                  tooltip: 'Refresh Curriculum',
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             _isLoading
                 ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
@@ -412,7 +359,17 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _showStudySettingsDialog,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StudySessionScreen(lecture: lecture),
+                    ),
+                  ).then((_) {
+                      _fetchData(); // Refresh stats on return
+                      context.read<AppState>().fetchUserInfo(); // Refresh credits
+                  });
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),

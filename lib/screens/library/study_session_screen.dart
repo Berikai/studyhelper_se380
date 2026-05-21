@@ -45,10 +45,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> with SingleTick
   Future<void> _fetchNextQuestion() async {
     if (_isAnswered) {
       _currentQuestionIndex++;
-      if (_currentQuestionIndex >= widget.totalQuestions) {
-        _showQuizSummary();
-        return;
-      }
     }
 
     setState(() {
@@ -101,7 +97,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> with SingleTick
       widget.lecture.id, 
       widget.lecture.title, 
       _correctAnswers, 
-      widget.totalQuestions,
+      _currentQuestionIndex,
       jsonEncode(_sessionHistory),
     );
     
@@ -207,7 +203,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> with SingleTick
     return Scaffold(
       backgroundColor: const Color(0xff12141D),
       appBar: AppBar(
-        title: Text('Question ${_currentQuestionIndex + 1} / ${widget.totalQuestions}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('Question ${_currentQuestionIndex + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),

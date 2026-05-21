@@ -76,7 +76,18 @@ export const addDocument = (req, res) => {
     if (err || !row) return res.status(404).json({ error: "Lecture not found" });
     let docs = [];
     try { docs = JSON.parse(row.documents); } catch (e) { }
-    docs.push(documentName);
+    
+    if (req.file) {
+      const fileMeta = {
+        name: req.file.originalname,
+        path: req.file.path,
+        mime: req.file.mimetype
+      };
+      docs.push(fileMeta);
+    } else if (documentName) {
+      docs.push(documentName);
+    }
+    
     db.run('UPDATE lectures SET documents = ? WHERE id = ?', [JSON.stringify(docs), req.params.id], (err) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ documents: docs });

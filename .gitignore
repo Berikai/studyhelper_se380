@@ -50,6 +50,10 @@ node_modules
 # Local Database (in backend/)
 *.sqlite
 
+# Uploaded files (in backend/uploads/)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # Local Environment Variables (in backend/)
 .env
 

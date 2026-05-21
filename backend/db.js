@@ -53,6 +53,18 @@ const db = new sqlite3.Database('database.sqlite', (err) => {
         db.run(`ALTER TABLE study_history ADD COLUMN session_data TEXT`, (err) => { });
       }
     });
+
+    db.run(`CREATE TABLE IF NOT EXISTS study_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      lecture_id TEXT,
+      lecture_title TEXT,
+      target_date TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )`, (err) => {
+      if (err) console.error("Error creating study_plans table", err);
+    });
   }
 });
 

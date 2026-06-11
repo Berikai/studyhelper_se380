@@ -4,19 +4,44 @@ import jwt from 'jsonwebtoken';
 import db from '../db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'studyhelper_secret_key';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
+
+export const isValidEmail = (email) => {
+  if (typeof email !== 'string') return false;
+  return EMAIL_REGEX.test(email.trim());
+};
+
+export const isValidPassword = (password) => {
+  if (typeof password !== 'string') return false;
+  return password.trim().length >= MIN_PASSWORD_LENGTH;
+};
 
 export const register = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedPassword = password?.trim();
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    db.run('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword], function (err) {
+    if (!normalizedEmail || !normalizedPassword) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+
+    if (!isValidPassword(normalizedPassword)) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+
+    const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
+    db.run('INSERT INTO users (email, password) VALUES (?, ?)', [normalizedEmail, hashedPassword], function (err) {
       if (err) {
         if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'Email already exists' });
         return res.status(500).json({ error: err.message });
       }
-      res.status(201).json({ id: this.lastID, email, credits: 100 });
+      res.status(201).json({ id: this.lastID, email: normalizedEmail, credits: 100 });
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

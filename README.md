@@ -24,7 +24,7 @@ To provide a deeper understanding of the material, the app features a built-in A
 
 - **Backend**: Node.js (Express)
 
-- **Database**: SQLite (Local)
+- **Database**: SQLite
 
 - **AI Integration**: Gemini API
 

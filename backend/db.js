@@ -65,6 +65,21 @@ const db = new sqlite3.Database('database.sqlite', (err) => {
     )`, (err) => {
       if (err) console.error("Error creating study_plans table", err);
     });
+
+    db.run(`CREATE TABLE IF NOT EXISTS shared_flashcards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER,
+      receiver_id INTEGER,
+      lecture_id TEXT,
+      lecture_title TEXT,
+      flashcards TEXT,
+      shared_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(sender_id) REFERENCES users(id),
+      FOREIGN KEY(receiver_id) REFERENCES users(id),
+      UNIQUE(sender_id, receiver_id, lecture_id)
+    )`, (err) => {
+      if (err) console.error("Error creating shared_flashcards table", err);
+    });
   }
 });
 

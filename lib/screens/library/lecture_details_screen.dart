@@ -190,6 +190,57 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
     );
   }
 
+  void _showShareDialog() {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xff181a26),
+        title: const Text('Share Flashcards', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the email of the user you want to share these flashcards with:', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'User Email',
+                labelStyle: TextStyle(color: Colors.blueAccent),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white70))),
+          ElevatedButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty) return;
+              
+              Navigator.pop(context); // Close dialog
+              
+              try {
+                await ApiService.shareFlashcards(widget.lecture.id, email);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flashcards shared successfully!')));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))));
+                }
+              }
+            },
+            child: const Text('Share'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
@@ -267,6 +318,18 @@ class _LectureDetailsScreenState extends State<LectureDetailsScreen> {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardScreen(lecture: lecture)));
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.share, color: Colors.white),
+                      label: const Text('Share Flashcards', style: TextStyle(color: Colors.white)),
+                      onPressed: () {
+                        _showShareDialog();
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
                     ),
                   )
                 ],

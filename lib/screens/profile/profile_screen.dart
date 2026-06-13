@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
-import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import 'study_history_screen.dart';
+import 'shared_users_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -139,6 +138,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         _buildListTile(Icons.history, 'Study History', () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyHistoryScreen()));
+                        }),
+                        const Divider(height: 1, color: Colors.black26),
+                        _buildListTile(Icons.folder_shared, 'Shared Flashcards', () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SharedUsersScreen()));
                         }),
                         /*const Divider(height: 1, color: Colors.black26),
                         _buildListTile(Icons.settings, 'Preferences', () {

@@ -399,4 +399,53 @@ class ApiService {
     );
     return response.statusCode == 200;
   }
+
+  // Share methods
+  static Future<void> shareFlashcards(String lectureId, String email) async {
+    final token = await getToken();
+    if (token == null) throw Exception("Not authenticated");
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/share'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'lectureId': lectureId, 'email': email}),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception(jsonDecode(response.body)['error'] ?? "Failed to share flashcards");
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getSharedUsers() async {
+    final token = await getToken();
+    if (token == null) return [];
+    
+    final response = await http.get(
+      Uri.parse('$baseUrl/share/users'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    }
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getSharedLectures(int senderId) async {
+    final token = await getToken();
+    if (token == null) return [];
+    
+    final response = await http.get(
+      Uri.parse('$baseUrl/share/users/$senderId/lectures'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    }
+    return [];
+  }
 }
